@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AlphaInk — Gestione Vendite & IVA</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  [x-cloak] { display: none !important; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .tab-active { background: #1e3a8a; color: white; }
+  .channel-sito { background: #dbeafe; color: #1e40af; }
+  .channel-amazon { background: #fef3c7; color: #92400e; }
+  .channel-ebay { background: #fee2e2; color: #991b1b; }
+  input:invalid { border-color: #ef4444; }
+  table { border-collapse: collapse; }
+  th, td { border: 1px solid #e5e7eb; padding: 6px 10px; font-size: 0.875rem; }
+  th { background: #f9fafb; text-align: left; font-weight: 600; }
+  .btn { padding: 6px 12px; border-radius: 6px; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.15s; }
+  .btn-primary { background: #1e3a8a; color: white; }
+  .btn-primary:hover { background: #1e40af; }
+  .btn-danger { background: #dc2626; color: white; }
+  .btn-danger:hover { background: #b91c1c; }
+  .btn-secondary { background: #e5e7eb; color: #111827; }
+  .btn-secondary:hover { background: #d1d5db; }
+  .input, select.input { border: 1px solid #d1d5db; border-radius: 6px; padding: 6px 10px; font-size: 0.875rem; }
+  .card { background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); padding: 16px; }
+</style>
+</head>
+<body class="bg-slate-100 min-h-screen">
+
+<header class="bg-slate-900 text-white px-6 py-4 shadow-md">
+  <div class="flex items-center justify-between flex-wrap gap-3">
+    <div>
+      <h1 class="text-2xl font-bold">AlphaInk</h1>
+      <p class="text-slate-300 text-sm">Gestione prodotti, acquisti, vendite e IVA</p>
+    </div>
+    <div class="flex items-center gap-3 flex-wrap">
+      <label class="text-sm">Anno:</label>
+      <select id="yearSelect" class="input text-slate-900"></select>
+      <button class="btn btn-secondary" onclick="addYear()">+ Anno</button>
+      <button class="btn btn-secondary" onclick="exportData()">Esporta</button>
+      <label class="btn btn-secondary cursor-pointer">
+        Importa
+        <input type="file" accept="application/json" class="hidden" onchange="importData(event)" />
+      </label>
+    </div>
+  </div>
+</header>
+
+<nav class="bg-white border-b border-slate-200 px-6 py-2 flex gap-2 flex-wrap">
+  <button class="btn tab-btn tab-active" data-tab="dashboard">Riepilogo IVA</button>
+  <button class="btn tab-btn btn-secondary" data-tab="products">Prodotti</button>
+  <button class="btn tab-btn btn-secondary" data-tab="purchases">Acquisti (Fatture)</button>
+  <button class="btn tab-btn btn-secondary" data-tab="sales">Vendite</button>
+</nav>
+
+<main class="p-6 max-w-7xl mx-auto">
+
+  <!-- DASHBOARD -->
+  <section id="tab-dashboard" class="tab-content">
+    <h2 class="text-xl font-bold mb-4">Riepilogo IVA anno <span id="dashYear"></span></h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div class="card">
+        <p class="text-xs text-slate-500 uppercase">IVA su Acquisti</p>
+        <p id="totalVatPurchases" class="text-2xl font-bold text-blue-700 mt-1">€ 0,00</p>
+        <p id="totalNetPurchases" class="text-xs text-slate-500">Imponibile € 0,00</p>
+      </div>
+      <div class="card">
+        <p class="text-xs text-slate-500 uppercase">IVA su Vendite</p>
+        <p id="totalVatSales" class="text-2xl font-bold text-green-700 mt-1">€ 0,00</p>
+        <p id="totalNetSales" class="text-xs text-slate-500">Imponibile € 0,00</p>
+      </div>
+      <div class="card">
+        <p class="text-xs text-slate-500 uppercase">IVA da Versare</p>
+        <p id="totalVatDue" class="text-2xl font-bold text-red-700 mt-1">€ 0,00</p>
+        <p class="text-xs text-slate-500">Vendite − Acquisti</p>
+      </div>
+    </div>
+
+    <div class="card overflow-x-auto">
+      <h3 class="font-semibold mb-3">Dettaglio mensile</h3>
+      <table class="w-full">
+        <thead>
+          <tr>
+            <th>Mese</th>
+            <th class="text-right">Imponibile Acquisti</th>
+            <th class="text-right">IVA Acquisti</th>
+            <th class="text-right">Imponibile Vendite</th>
+            <th class="text-right">IVA Vendite</th>
+            <th class="text-right">IVA da Versare</th>
+          </tr>
+        </thead>
+        <tbody id="monthlyBreakdown"></tbody>
+        <tfoot>
+          <tr class="font-bold bg-slate-50">
+            <td>Totale</td>
+            <td class="text-right" id="ftNetP">€ 0,00</td>
+            <td class="text-right" id="ftVatP">€ 0,00</td>
+            <td class="text-right" id="ftNetS">€ 0,00</td>
+            <td class="text-right" id="ftVatS">€ 0,00</td>
+            <td class="text-right" id="ftDue">€ 0,00</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </section>
+
+  <!-- PRODUCTS -->
+  <section id="tab-products" class="tab-content hidden">
+    <h2 class="text-xl font-bold mb-4">Prodotti in catalogo</h2>
+    <div class="card mb-4">
+      <h3 class="font-semibold mb-3">Nuovo prodotto</h3>
+      <div class="grid grid-cols-1 md:grid-cols-6 gap-3">
+        <input id="pName" class="input md:col-span-2" placeholder="Nome prodotto" />
+        <input id="pSku" class="input" placeholder="SKU / Codice" />
+        <select id="pUnit" class="input">
+          <option value="pz">pz</option>
+          <option value="kg">kg</option>
+          <option value="g">g</option>
+          <option value="l">l</option>
+          <option value="ml">ml</option>
+          <option value="m">m</option>
+          <option value="conf">conf</option>
+        </select>
+        <input id="pPriceSito" type="number" step="0.01" min="0" class="input" placeholder="€ Sito (no IVA)" />
+        <input id="pPriceAmazon" type="number" step="0.01" min="0" class="input" placeholder="€ Amazon (no IVA)" />
+        <input id="pPriceEbay" type="number" step="0.01" min="0" class="input" placeholder="€ eBay (no IVA)" />
+      </div>
+      <div class="mt-3">
+        <button class="btn btn-primary" onclick="addProduct()">Aggiungi prodotto</button>
+      </div>
+    </div>
+
+    <div class="card overflow-x-auto">
+      <table class="w-full">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>SKU</th>
+            <th>U.M.</th>
+            <th class="text-right">€ Sito</th>
+            <th class="text-right">€ Amazon</th>
+            <th class="text-right">€ eBay</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="productsTable"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- PURCHASES -->
+  <section id="tab-purchases" class="tab-content hidden">
+    <h2 class="text-xl font-bold mb-4">Acquisti con fattura</h2>
+    <div class="card mb-4">
+      <h3 class="font-semibold mb-3">Nuova riga fattura d'acquisto</h3>
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <select id="buyMonth" class="input"></select>
+        <input id="buyInvoiceNum" class="input" placeholder="N° fattura" />
+        <input id="buyInvoiceDate" type="date" class="input" />
+        <input id="buySupplier" class="input" placeholder="Fornitore" />
+        <select id="buyProduct" class="input md:col-span-2"></select>
+        <input id="buyQty" type="number" step="0.001" min="0" class="input" placeholder="Quantità" />
+        <input id="buyPrice" type="number" step="0.0001" min="0" class="input" placeholder="Prezzo unit. no IVA" />
+      </div>
+      <div class="mt-3">
+        <button class="btn btn-primary" onclick="addPurchase()">Aggiungi acquisto</button>
+      </div>
+    </div>
+
+    <div class="card overflow-x-auto">
+      <table class="w-full">
+        <thead>
+          <tr>
+            <th>Mese</th>
+            <th>Fattura</th>
+            <th>Data</th>
+            <th>Fornitore</th>
+            <th>Prodotto</th>
+            <th class="text-right">Qtà</th>
+            <th>U.M.</th>
+            <th class="text-right">€ Unit. (no IVA)</th>
+            <th class="text-right">Imponibile</th>
+            <th class="text-right">IVA 22%</th>
+            <th class="text-right">Totale</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="purchasesTable"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- SALES -->
+  <section id="tab-sales" class="tab-content hidden">
+    <h2 class="text-xl font-bold mb-4">Vendite per canale</h2>
+    <div class="card mb-4">
+      <h3 class="font-semibold mb-3">Nuova vendita</h3>
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <select id="sellMonth" class="input"></select>
+        <select id="sellChannel" class="input">
+          <option value="sito">Sito</option>
+          <option value="amazon">Amazon</option>
+          <option value="ebay">eBay</option>
+        </select>
+        <select id="sellProduct" class="input md:col-span-2"></select>
+        <input id="sellQty" type="number" step="0.001" min="0" class="input" placeholder="Quantità" />
+        <input id="sellPrice" type="number" step="0.0001" min="0" class="input" placeholder="Prezzo unit. no IVA (auto da prodotto)" />
+      </div>
+      <div class="mt-3 flex gap-2 flex-wrap">
+        <button class="btn btn-primary" onclick="addSale()">Aggiungi vendita</button>
+        <span class="text-xs text-slate-500 self-center">Il prezzo si precompila dal canale selezionato, puoi sovrascriverlo.</span>
+      </div>
+    </div>
+
+    <div class="card overflow-x-auto">
+      <table class="w-full">
+        <thead>
+          <tr>
+            <th>Mese</th>
+            <th>Canale</th>
+            <th>Prodotto</th>
+            <th class="text-right">Qtà</th>
+            <th>U.M.</th>
+            <th class="text-right">€ Unit. (no IVA)</th>
+            <th class="text-right">Imponibile</th>
+            <th class="text-right">IVA 22%</th>
+            <th class="text-right">Totale</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="salesTable"></tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<script>
+const VAT_RATE = 0.22;
+const MONTHS = ["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"];
+const STORAGE_KEY = "alphaink_data_v1";
+
+let state = load();
+let currentYear = null;
+
+function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return {
+    years: [2026, 2027],
+    products: {},
+    purchases: {},
+    sales: {}
+  };
+}
+
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function ensureYear(y) {
+  if (!state.products[y]) state.products[y] = [];
+  if (!state.purchases[y]) state.purchases[y] = [];
+  if (!state.sales[y]) state.sales[y] = [];
+}
+
+function fmt(n) {
+  return new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(n || 0);
+}
+
+function fmtQty(n) {
+  return new Intl.NumberFormat("it-IT", { maximumFractionDigits: 3 }).format(n || 0);
+}
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+function addYear() {
+  const y = prompt("Inserisci l'anno da aggiungere (es. 2028):");
+  if (!y) return;
+  const n = parseInt(y, 10);
+  if (!n || n < 2000 || n > 2100) { alert("Anno non valido."); return; }
+  if (state.years.includes(n)) { alert("Anno già presente."); return; }
+  state.years.push(n);
+  state.years.sort((a,b)=>a-b);
+  ensureYear(n);
+  save();
+  renderYearSelect();
+  document.getElementById("yearSelect").value = n;
+  switchYear(n);
+}
+
+function renderYearSelect() {
+  const sel = document.getElementById("yearSelect");
+  sel.innerHTML = state.years.map(y => `<option value="${y}">${y}</option>`).join("");
+  if (!currentYear || !state.years.includes(currentYear)) currentYear = state.years[0];
+  sel.value = currentYear;
+}
+
+function switchYear(y) {
+  currentYear = parseInt(y, 10);
+  ensureYear(currentYear);
+  renderAll();
+}
+
+function renderAll() {
+  document.getElementById("dashYear").textContent = currentYear;
+  populateMonthSelects();
+  populateProductSelects();
+  renderProducts();
+  renderPurchases();
+  renderSales();
+  renderDashboard();
+}
+
+function populateMonthSelects() {
+  const opts = MONTHS.map((m,i) => `<option value="${i}">${m}</option>`).join("");
+  ["buyMonth","sellMonth"].forEach(id => {
+    const el = document.getElementById(id);
+    const prev = el.value;
+    el.innerHTML = opts;
+    if (prev) el.value = prev;
+  });
+}
+
+function populateProductSelects() {
+  const prods = state.products[currentYear] || [];
+  const opts = prods.length
+    ? prods.map(p => `<option value="${p.id}">${p.name}${p.sku ? " ["+p.sku+"]" : ""}</option>`).join("")
+    : `<option value="">(nessun prodotto)</option>`;
+  ["buyProduct","sellProduct"].forEach(id => {
+    const el = document.getElementById(id);
+    const prev = el.value;
+    el.innerHTML = opts;
+    if (prev) el.value = prev;
+  });
+}
+
+function getProduct(id) {
+  return (state.products[currentYear] || []).find(p => p.id === id);
+}
+
+/* --------- Products --------- */
+function addProduct() {
+  const name = document.getElementById("pName").value.trim();
+  if (!name) { alert("Nome prodotto obbligatorio."); return; }
+  const p = {
+    id: uid(),
+    name,
+    sku: document.getElementById("pSku").value.trim(),
+    unit: document.getElementById("pUnit").value,
+    prices: {
+      sito: parseFloat(document.getElementById("pPriceSito").value) || 0,
+      amazon: parseFloat(document.getElementById("pPriceAmazon").value) || 0,
+      ebay: parseFloat(document.getElementById("pPriceEbay").value) || 0
+    }
+  };
+  state.products[currentYear].push(p);
+  save();
+  ["pName","pSku","pPriceSito","pPriceAmazon","pPriceEbay"].forEach(id => document.getElementById(id).value = "");
+  populateProductSelects();
+  renderProducts();
+}
+
+function deleteProduct(id) {
+  if (!confirm("Eliminare il prodotto? Le righe di acquisto/vendita collegate resteranno ma perderanno il riferimento.")) return;
+  state.products[currentYear] = state.products[currentYear].filter(p => p.id !== id);
+  save();
+  populateProductSelects();
+  renderProducts();
+  renderPurchases();
+  renderSales();
+  renderDashboard();
+}
+
+function updateProductPrice(id, channel, value) {
+  const p = getProduct(id);
+  if (!p) return;
+  p.prices[channel] = parseFloat(value) || 0;
+  save();
+}
+
+function renderProducts() {
+  const prods = state.products[currentYear] || [];
+  const tbody = document.getElementById("productsTable");
+  if (!prods.length) {
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center text-slate-500 py-4">Nessun prodotto per l'anno ${currentYear}.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = prods.map(p => `
+    <tr>
+      <td>${escapeHtml(p.name)}</td>
+      <td>${escapeHtml(p.sku || "")}</td>
+      <td>${escapeHtml(p.unit)}</td>
+      <td class="text-right"><input type="number" step="0.01" class="input w-24 text-right" value="${p.prices.sito}" onchange="updateProductPrice('${p.id}','sito',this.value)"></td>
+      <td class="text-right"><input type="number" step="0.01" class="input w-24 text-right" value="${p.prices.amazon}" onchange="updateProductPrice('${p.id}','amazon',this.value)"></td>
+      <td class="text-right"><input type="number" step="0.01" class="input w-24 text-right" value="${p.prices.ebay}" onchange="updateProductPrice('${p.id}','ebay',this.value)"></td>
+      <td><button class="btn btn-danger" onclick="deleteProduct('${p.id}')">Elimina</button></td>
+    </tr>
+  `).join("");
+}
+
+/* --------- Purchases --------- */
+function addPurchase() {
+  const productId = document.getElementById("buyProduct").value;
+  if (!productId) { alert("Crea prima un prodotto."); return; }
+  const p = getProduct(productId);
+  const qty = parseFloat(document.getElementById("buyQty").value);
+  const price = parseFloat(document.getElementById("buyPrice").value);
+  if (!(qty > 0) || !(price >= 0)) { alert("Quantità e prezzo non validi."); return; }
+  const row = {
+    id: uid(),
+    month: parseInt(document.getElementById("buyMonth").value, 10),
+    invoiceNum: document.getElementById("buyInvoiceNum").value.trim(),
+    invoiceDate: document.getElementById("buyInvoiceDate").value,
+    supplier: document.getElementById("buySupplier").value.trim(),
+    productId,
+    productName: p.name,
+    unit: p.unit,
+    qty,
+    unitPrice: price
+  };
+  state.purchases[currentYear].push(row);
+  save();
+  ["buyInvoiceNum","buyInvoiceDate","buySupplier","buyQty","buyPrice"].forEach(id => document.getElementById(id).value = "");
+  renderPurchases();
+  renderDashboard();
+}
+
+function deletePurchase(id) {
+  state.purchases[currentYear] = state.purchases[currentYear].filter(r => r.id !== id);
+  save();
+  renderPurchases();
+  renderDashboard();
+}
+
+function renderPurchases() {
+  const rows = (state.purchases[currentYear] || []).slice().sort((a,b)=>a.month-b.month);
+  const tbody = document.getElementById("purchasesTable");
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="12" class="text-center text-slate-500 py-4">Nessun acquisto registrato.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(r => {
+    const net = r.qty * r.unitPrice;
+    const vat = net * VAT_RATE;
+    return `
+    <tr>
+      <td>${MONTHS[r.month]}</td>
+      <td>${escapeHtml(r.invoiceNum)}</td>
+      <td>${escapeHtml(r.invoiceDate)}</td>
+      <td>${escapeHtml(r.supplier)}</td>
+      <td>${escapeHtml(r.productName)}</td>
+      <td class="text-right">${fmtQty(r.qty)}</td>
+      <td>${escapeHtml(r.unit)}</td>
+      <td class="text-right">${fmt(r.unitPrice)}</td>
+      <td class="text-right">${fmt(net)}</td>
+      <td class="text-right">${fmt(vat)}</td>
+      <td class="text-right font-semibold">${fmt(net+vat)}</td>
+      <td><button class="btn btn-danger" onclick="deletePurchase('${r.id}')">X</button></td>
+    </tr>`;
+  }).join("");
+}
+
+/* --------- Sales --------- */
+function addSale() {
+  const productId = document.getElementById("sellProduct").value;
+  if (!productId) { alert("Crea prima un prodotto."); return; }
+  const p = getProduct(productId);
+  const channel = document.getElementById("sellChannel").value;
+  const qty = parseFloat(document.getElementById("sellQty").value);
+  let price = parseFloat(document.getElementById("sellPrice").value);
+  if (isNaN(price)) price = p.prices[channel] || 0;
+  if (!(qty > 0) || !(price >= 0)) { alert("Quantità e prezzo non validi."); return; }
+  const row = {
+    id: uid(),
+    month: parseInt(document.getElementById("sellMonth").value, 10),
+    channel,
+    productId,
+    productName: p.name,
+    unit: p.unit,
+    qty,
+    unitPrice: price
+  };
+  state.sales[currentYear].push(row);
+  save();
+  ["sellQty","sellPrice"].forEach(id => document.getElementById(id).value = "");
+  renderSales();
+  renderDashboard();
+}
+
+function deleteSale(id) {
+  state.sales[currentYear] = state.sales[currentYear].filter(r => r.id !== id);
+  save();
+  renderSales();
+  renderDashboard();
+}
+
+function renderSales() {
+  const rows = (state.sales[currentYear] || []).slice().sort((a,b)=>a.month-b.month || a.channel.localeCompare(b.channel));
+  const tbody = document.getElementById("salesTable");
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="10" class="text-center text-slate-500 py-4">Nessuna vendita registrata.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(r => {
+    const net = r.qty * r.unitPrice;
+    const vat = net * VAT_RATE;
+    return `
+    <tr>
+      <td>${MONTHS[r.month]}</td>
+      <td><span class="px-2 py-0.5 rounded channel-${r.channel}">${r.channel}</span></td>
+      <td>${escapeHtml(r.productName)}</td>
+      <td class="text-right">${fmtQty(r.qty)}</td>
+      <td>${escapeHtml(r.unit)}</td>
+      <td class="text-right">${fmt(r.unitPrice)}</td>
+      <td class="text-right">${fmt(net)}</td>
+      <td class="text-right">${fmt(vat)}</td>
+      <td class="text-right font-semibold">${fmt(net+vat)}</td>
+      <td><button class="btn btn-danger" onclick="deleteSale('${r.id}')">X</button></td>
+    </tr>`;
+  }).join("");
+}
+
+/* Prefill sale price from product/channel */
+document.addEventListener("change", e => {
+  if (e.target.id === "sellProduct" || e.target.id === "sellChannel") {
+    const pid = document.getElementById("sellProduct").value;
+    const ch = document.getElementById("sellChannel").value;
+    const p = getProduct(pid);
+    if (p) document.getElementById("sellPrice").value = p.prices[ch] || "";
+  }
+});
+
+/* --------- Dashboard --------- */
+function renderDashboard() {
+  const purchases = state.purchases[currentYear] || [];
+  const sales = state.sales[currentYear] || [];
+  const byMonth = MONTHS.map(() => ({ netP:0, vatP:0, netS:0, vatS:0 }));
+  purchases.forEach(r => {
+    const net = r.qty * r.unitPrice;
+    byMonth[r.month].netP += net;
+    byMonth[r.month].vatP += net * VAT_RATE;
+  });
+  sales.forEach(r => {
+    const net = r.qty * r.unitPrice;
+    byMonth[r.month].netS += net;
+    byMonth[r.month].vatS += net * VAT_RATE;
+  });
+
+  let tNetP=0, tVatP=0, tNetS=0, tVatS=0;
+  const tbody = document.getElementById("monthlyBreakdown");
+  tbody.innerHTML = byMonth.map((m,i) => {
+    tNetP += m.netP; tVatP += m.vatP; tNetS += m.netS; tVatS += m.vatS;
+    const due = m.vatS - m.vatP;
+    return `
+      <tr>
+        <td>${MONTHS[i]}</td>
+        <td class="text-right">${fmt(m.netP)}</td>
+        <td class="text-right text-blue-700">${fmt(m.vatP)}</td>
+        <td class="text-right">${fmt(m.netS)}</td>
+        <td class="text-right text-green-700">${fmt(m.vatS)}</td>
+        <td class="text-right font-semibold ${due>=0?'text-red-700':'text-emerald-700'}">${fmt(due)}</td>
+      </tr>`;
+  }).join("");
+
+  document.getElementById("ftNetP").textContent = fmt(tNetP);
+  document.getElementById("ftVatP").textContent = fmt(tVatP);
+  document.getElementById("ftNetS").textContent = fmt(tNetS);
+  document.getElementById("ftVatS").textContent = fmt(tVatS);
+  document.getElementById("ftDue").textContent = fmt(tVatS - tVatP);
+
+  document.getElementById("totalNetPurchases").textContent = "Imponibile " + fmt(tNetP);
+  document.getElementById("totalVatPurchases").textContent = fmt(tVatP);
+  document.getElementById("totalNetSales").textContent = "Imponibile " + fmt(tNetS);
+  document.getElementById("totalVatSales").textContent = fmt(tVatS);
+  const due = tVatS - tVatP;
+  const dueEl = document.getElementById("totalVatDue");
+  dueEl.textContent = fmt(due);
+  dueEl.className = "text-2xl font-bold mt-1 " + (due >= 0 ? "text-red-700" : "text-emerald-700");
+}
+
+/* --------- Import / Export --------- */
+function exportData() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `alphaink_backup_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.years || !Array.isArray(data.years)) throw new Error("Formato non valido");
+      if (!confirm("Importare sovrascriverà i dati correnti. Continuare?")) return;
+      state = data;
+      save();
+      renderYearSelect();
+      switchYear(state.years[0]);
+    } catch(err) {
+      alert("Errore import: " + err.message);
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = "";
+}
+
+/* --------- Tabs --------- */
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab-btn").forEach(b => { b.classList.remove("tab-active"); b.classList.add("btn-secondary"); });
+    btn.classList.add("tab-active");
+    btn.classList.remove("btn-secondary");
+    document.querySelectorAll(".tab-content").forEach(el => el.classList.add("hidden"));
+    document.getElementById("tab-" + btn.dataset.tab).classList.remove("hidden");
+  });
+});
+
+/* --------- Utils --------- */
+function escapeHtml(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+}
+
+/* --------- Init --------- */
+document.getElementById("yearSelect").addEventListener("change", e => switchYear(e.target.value));
+state.years.forEach(ensureYear);
+renderYearSelect();
+switchYear(state.years[0]);
+</script>
+</body>
+</html>
