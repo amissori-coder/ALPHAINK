@@ -6,7 +6,7 @@
   "description": "AlphaInk — Strumento CFO per gestione fatture, acquisti e pianificazione IVA",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && node scripts/bundle-single.mjs",
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit"
   },
