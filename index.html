@@ -14,7 +14,27 @@
     />
   </head>
   <body class="bg-ink-50 text-ink-900 antialiased">
-    <div id="root"></div>
+    <style>
+      .ai-boot {
+        position: fixed; inset: 0; display: flex; align-items: center;
+        justify-content: center; flex-direction: column; gap: 12px;
+        font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        background: #f6f7f9; color: #3f4859;
+      }
+      .ai-boot .mark {
+        width: 44px; height: 44px; border-radius: 10px; background: #0c0e13;
+        color: #fff; display: flex; align-items: center; justify-content: center;
+        font-weight: 700; font-size: 22px;
+      }
+      .ai-boot small { color: #818ea3; font-size: 12px; }
+    </style>
+    <div id="root">
+      <div class="ai-boot">
+        <div class="mark">α</div>
+        <div>AlphaInk — Caricamento…</div>
+        <small>Se questa schermata resta visibile, apri la console per vedere eventuali errori.</small>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
