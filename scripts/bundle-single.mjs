@@ -19,7 +19,7 @@ if (!existsSync(idx)) {
 
 const html = readFileSync(idx, 'utf8');
 
-const scriptRe = /<script\s+type="module"[^>]*src="([^"]+\.js)"[^>]*><\/script>/;
+const scriptRe = /<script\s+(?:type="module"\s+)?[^>]*src="([^"]+\.js)"[^>]*><\/script>/;
 const cssRe = /<link\s+rel="stylesheet"[^>]*href="([^"]+\.css)"[^>]*>/;
 
 const scriptMatch = html.match(scriptRe);
@@ -36,11 +36,15 @@ const css = cssMatch ? readFileSync(resolve(cssMatch[1]), 'utf8') : '';
 
 // Use function replacements to avoid `$&`, `$1`, etc. being interpreted
 // as back-references when JS/CSS bundle content is injected.
-let out = html.replace(scriptRe, () => `<script type="module">${js}</script>`);
+// The bundle is an IIFE (classic script) so we inline it as a plain <script>
+// — this works even when the file is opened via file:// in every browser.
+// Also escape any literal </script> in the JS so the inline block doesn't
+// terminate prematurely.
+const safeJs = js.replace(/<\/script/gi, '<\\/script');
+let out = html.replace(scriptRe, () => `<script>${safeJs}</script>`);
 if (cssMatch) out = out.replace(cssRe, () => `<style>${css}</style>`);
 
-// Also strip any <link rel="modulepreload"> pointing at the now-inlined JS,
-// so the browser doesn't attempt a redundant fetch that can fail under file://.
+// Strip any <link rel="modulepreload"> pointing at the now-inlined JS.
 out = out.replace(/<link\s+rel="modulepreload"[^>]*>\s*/g, '');
 
 const target = join(dist, 'alphaink.html');
