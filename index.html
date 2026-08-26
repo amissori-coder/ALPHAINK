@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AlphaInk · Controllo IVA</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['Inter', 'system-ui', 'sans-serif'],
+          mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+        },
+        colors: {
+          brand: {
+            50:  '#ecfdf5',
+            400: '#34d399',
+            500: '#10b981',
+            600: '#059669',
+            700: '#047857',
+          }
+        }
+      }
+    }
+  }
+</script>
+<style>
+  html, body { background: #020617; }
+  body { font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  .num { font-family: 'JetBrains Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+  .card { background: linear-gradient(180deg, #0f172a 0%, #0b1424 100%); border: 1px solid #1e293b; }
+  .input {
+    background: #0b1424;
+    border: 1px solid #1e293b;
+    color: #e2e8f0;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+    width: 100%;
+  }
+  .input:focus { border-color: #10b981; box-shadow: 0 0 0 3px rgba(16,185,129,.15); }
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 8px; font-weight: 600; font-size: 13px; transition: all .15s; cursor: pointer; }
+  .btn-primary { background: #10b981; color: #052e1e; }
+  .btn-primary:hover { background: #34d399; }
+  .btn-ghost { background: transparent; color: #cbd5e1; border: 1px solid #1e293b; }
+  .btn-ghost:hover { background: #0f172a; color: #f1f5f9; }
+  .btn-danger { background: transparent; color: #f87171; border: 1px solid #7f1d1d; }
+  .btn-danger:hover { background: #7f1d1d; color: #fee2e2; }
+  .nav-link { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 8px; color: #94a3b8; font-weight: 500; font-size: 14px; cursor: pointer; }
+  .nav-link:hover { background: #0f172a; color: #f1f5f9; }
+  .nav-link.active { background: rgba(16,185,129,.1); color: #34d399; }
+  .nav-link.active svg { color: #34d399; }
+  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+  .badge-sito { background: rgba(59,130,246,.15); color: #93c5fd; }
+  .badge-amazon { background: rgba(249,115,22,.15); color: #fdba74; }
+  .badge-ebay { background: rgba(217,70,239,.15); color: #f0abfc; }
+  .table th { text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: #64748b; padding: 10px 12px; border-bottom: 1px solid #1e293b; }
+  .table td { padding: 12px; border-bottom: 1px solid #1e293b; font-size: 14px; color: #e2e8f0; vertical-align: middle; }
+  .table tr:hover td { background: rgba(15,23,42,.4); }
+  select.input { appearance: none; background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%2394a3b8'%3e%3cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 11.06l3.71-3.83a.75.75 0 111.08 1.04l-4.25 4.39a.75.75 0 01-1.08 0L5.21 8.27a.75.75 0 01.02-1.06z'/%3e%3c/svg%3e"); background-repeat: no-repeat; background-position: right .5rem center; background-size: 1.25em 1.25em; padding-right: 2.25rem; }
+  .save-dot { width: 8px; height: 8px; border-radius: 50%; background: #10b981; animation: pulse 2s ease-in-out infinite; }
+  .save-dot.saving { background: #eab308; animation: none; }
+  .save-dot.error { background: #ef4444; animation: none; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  .modal-backdrop { background: rgba(2,6,23,.75); backdrop-filter: blur(6px); }
+  .kpi-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: #64748b; }
+  .kpi-value { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 28px; font-weight: 700; color: #f1f5f9; letter-spacing: -.02em; }
+  .kpi-sub { font-size: 12px; color: #94a3b8; margin-top: 4px; }
+  .month-cell { min-width: 110px; }
+  .bar { height: 6px; background: #1e293b; border-radius: 999px; overflow: hidden; }
+  .bar > span { display: block; height: 100%; background: linear-gradient(90deg,#10b981,#34d399); }
+</style>
+</head>
+<body class="text-slate-100 min-h-screen">
+
+<!-- LOADING -->
+<div id="view-loading" class="fixed inset-0 flex items-center justify-center bg-slate-950 z-50">
+  <div class="text-center">
+    <div class="w-10 h-10 border-2 border-slate-700 border-t-brand-500 rounded-full animate-spin mx-auto"></div>
+    <p class="mt-4 text-sm text-slate-500">Caricamento…</p>
+  </div>
+</div>
+
+<!-- LOGIN -->
+<div id="view-login" class="hidden min-h-screen flex items-center justify-center px-4">
+  <div class="w-full max-w-md">
+    <div class="text-center mb-8">
+      <div class="inline-flex items-center gap-3 mb-3">
+        <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center font-bold text-lg text-slate-950">A</div>
+        <h1 class="text-2xl font-bold tracking-tight">AlphaInk</h1>
+      </div>
+      <p class="text-sm text-slate-400">Controllo IVA · Dashboard CFO</p>
+    </div>
+    <div class="card rounded-2xl p-8">
+      <h2 class="text-lg font-semibold mb-1" id="login-title">Accedi</h2>
+      <p class="text-sm text-slate-400 mb-6" id="login-subtitle">Inserisci le credenziali del team</p>
+      <form id="form-login" class="space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1.5">Email</label>
+          <input type="email" id="login-email" class="input" placeholder="cfo@alphaink.it" required autocomplete="email" />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1.5">Password</label>
+          <input type="password" id="login-password" class="input" placeholder="••••••••" required autocomplete="current-password" minlength="6" />
+        </div>
+        <div id="login-error" class="hidden text-xs text-red-400 bg-red-950/40 border border-red-900/50 rounded-lg px-3 py-2"></div>
+        <button type="submit" class="btn btn-primary w-full justify-center py-2.5" id="login-submit">Accedi</button>
+      </form>
+      <div class="mt-6 pt-6 border-t border-slate-800 text-center">
+        <button id="toggle-signup" class="text-sm text-brand-400 hover:text-brand-500 font-medium">Non hai un account? Registrati</button>
+      </div>
+    </div>
+    <p class="text-center text-xs text-slate-600 mt-6">Firebase Auth · Firestore · dati crittografati in transito</p>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="view-app" class="hidden min-h-screen flex">
+
+  <!-- SIDEBAR -->
+  <aside class="w-64 fixed inset-y-0 left-0 bg-slate-950 border-r border-slate-800 flex flex-col z-30">
+    <div class="px-5 py-5 border-b border-slate-800">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center font-bold text-slate-950">A</div>
+        <div>
+          <div class="font-bold tracking-tight">AlphaInk</div>
+          <div class="text-[11px] text-slate-500 uppercase tracking-wider">Controllo IVA</div>
+        </div>
+      </div>
+    </div>
+    <nav class="flex-1 p-3 space-y-1">
+      <a class="nav-link active" data-section="dashboard">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+        Dashboard
+      </a>
+      <a class="nav-link" data-section="vat">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        Riepilogo IVA
+      </a>
+      <a class="nav-link" data-section="purchases">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+        Acquisti
+      </a>
+      <a class="nav-link" data-section="sales">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+        Vendite
+      </a>
+      <a class="nav-link" data-section="products">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+        Prodotti
+      </a>
+    </nav>
+    <div class="p-3 border-t border-slate-800 space-y-2">
+      <div class="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-900/60 border border-slate-800">
+        <div class="flex items-center gap-2">
+          <div id="save-dot" class="save-dot"></div>
+          <div>
+            <div class="text-[11px] font-semibold text-slate-300" id="save-label">Autosalvato</div>
+            <div class="text-[10px] text-slate-500" id="save-time">—</div>
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 px-2 py-2">
+        <div class="w-7 h-7 rounded-full bg-slate-800 flex items-center justify-center text-xs font-semibold" id="user-avatar">?</div>
+        <div class="flex-1 min-w-0">
+          <div class="text-xs text-slate-300 truncate" id="user-email">—</div>
+        </div>
+        <button id="btn-logout" class="text-slate-500 hover:text-red-400 p-1" title="Esci">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="flex-1 ml-64">
+    <!-- TOP BAR -->
+    <header class="sticky top-0 z-20 bg-slate-950/80 backdrop-blur border-b border-slate-800 px-8 py-4 flex items-center justify-between">
+      <div>
+        <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-500" id="crumb">Dashboard</div>
+        <h1 class="text-xl font-bold tracking-tight" id="page-title">Panoramica esercizio</h1>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="flex items-center gap-1 bg-slate-900 border border-slate-800 rounded-lg p-1">
+          <span class="text-[11px] text-slate-500 px-2">Anno</span>
+          <select id="year-select" class="bg-transparent text-sm font-semibold text-slate-100 pr-2 focus:outline-none cursor-pointer"></select>
+          <button id="btn-add-year" class="text-brand-400 hover:text-brand-500 px-2 py-0.5 text-sm font-bold" title="Aggiungi anno">+</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- SECTION: DASHBOARD -->
+    <section id="section-dashboard" class="p-8 space-y-6">
+      <div class="grid grid-cols-4 gap-4">
+        <div class="card rounded-xl p-5">
+          <div class="kpi-title">Vendite YTD (imponibile)</div>
+          <div class="kpi-value mt-2" id="kpi-sales">€ 0,00</div>
+          <div class="kpi-sub" id="kpi-sales-sub">— righe</div>
+        </div>
+        <div class="card rounded-xl p-5">
+          <div class="kpi-title">Acquisti YTD (imponibile)</div>
+          <div class="kpi-value mt-2" id="kpi-purchases">€ 0,00</div>
+          <div class="kpi-sub" id="kpi-purchases-sub">— righe</div>
+        </div>
+        <div class="card rounded-xl p-5">
+          <div class="kpi-title">IVA da versare YTD</div>
+          <div class="kpi-value mt-2" id="kpi-vat-due">€ 0,00</div>
+          <div class="kpi-sub" id="kpi-vat-due-sub">saldo netto anno</div>
+        </div>
+        <div class="card rounded-xl p-5 border-brand-700/40">
+          <div class="kpi-title flex items-center gap-2">
+            <span>Mese corrente</span>
+            <span class="badge" id="kpi-current-badge">—</span>
+          </div>
+          <div class="kpi-value mt-2" id="kpi-current">€ 0,00</div>
+          <div class="kpi-sub" id="kpi-current-sub">—</div>
+        </div>
+      </div>
+
+      <div class="card rounded-xl p-6">
+        <div class="flex items-start justify-between mb-4">
+          <div>
+            <h2 class="text-base font-semibold flex items-center gap-2">
+              <svg class="w-4 h-4 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+              Ottimizzazione IVA · Suggerimenti acquisti
+            </h2>
+            <p class="text-sm text-slate-400 mt-1">Per ogni mese in debito IVA, l'imponibile di acquisto necessario per azzerare il versamento.</p>
+          </div>
+        </div>
+        <div id="optimization-list" class="space-y-2"></div>
+      </div>
+
+      <div class="card rounded-xl p-6">
+        <h2 class="text-base font-semibold mb-4">Andamento mensile</h2>
+        <div class="overflow-x-auto">
+          <table class="w-full table">
+            <thead>
+              <tr>
+                <th>Mese</th>
+                <th class="text-right">Vendite imp.</th>
+                <th class="text-right">Acquisti imp.</th>
+                <th class="text-right">IVA vendite</th>
+                <th class="text-right">IVA acquisti</th>
+                <th class="text-right">IVA da versare</th>
+                <th>Peso</th>
+              </tr>
+            </thead>
+            <tbody id="dashboard-months"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION: VAT -->
+    <section id="section-vat" class="hidden p-8 space-y-6">
+      <div class="grid grid-cols-3 gap-4">
+        <div class="card rounded-xl p-5">
+          <div class="kpi-title">IVA vendite YTD</div>
+          <div class="kpi-value mt-2 text-brand-400" id="vat-sales-total">€ 0,00</div>
+        </div>
+        <div class="card rounded-xl p-5">
+          <div class="kpi-title">IVA acquisti YTD</div>
+          <div class="kpi-value mt-2 text-blue-400" id="vat-purchases-total">€ 0,00</div>
+        </div>
+        <div class="card rounded-xl p-5">
+          <div class="kpi-title">IVA da versare YTD</div>
+          <div class="kpi-value mt-2" id="vat-due-total">€ 0,00</div>
+        </div>
+      </div>
+
+      <div class="card rounded-xl overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
+          <div>
+            <h2 class="text-base font-semibold">Liquidazione IVA mensile</h2>
+            <p class="text-sm text-slate-400 mt-0.5">Aliquota 22%. Saldo negativo = credito IVA, positivo = da versare.</p>
+          </div>
+          <button id="btn-export-vat" class="btn btn-ghost">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+            Esporta CSV
+          </button>
+        </div>
+        <table class="w-full table">
+          <thead>
+            <tr>
+              <th>Mese</th>
+              <th class="text-right">Imp. vendite</th>
+              <th class="text-right">IVA vendite</th>
+              <th class="text-right">Imp. acquisti</th>
+              <th class="text-right">IVA acquisti</th>
+              <th class="text-right">IVA da versare</th>
+              <th class="text-right">Suggerim. acquisti</th>
+            </tr>
+          </thead>
+          <tbody id="vat-months"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SECTION: PURCHASES -->
+    <section id="section-purchases" class="hidden p-8 space-y-6">
+      <div class="card rounded-xl p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-base font-semibold">Registra acquisto da fattura</h2>
+          <div class="text-xs text-slate-500">Prezzo unitario senza IVA · IVA 22% automatica</div>
+        </div>
+        <form id="form-purchase" class="grid grid-cols-12 gap-3">
+          <div class="col-span-2">
+            <label class="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Mese</label>
+            <select id="p-month" class="input mt-1" required></select>
+          </div>
+          <div class="col-span-2">
+            <label class="text-[11px] font-medium text-slate-400 uppercase tracking-wider">N° Fattura</label>
+            <input id="p-invoice" class="input mt-1" placeholder="es. FT/2026/123" required />
+          </div>
+          <div class="col-span-2">
+            <label class="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Data</label>
+            <input id="p-date" type="date" class="input mt-1" required />
+          </div>
+          <div class="col-span-3">
+            <label class="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Fornitore</label>
+            <input id="p-supplier" class="input mt-1" placeholder="Ragione sociale" required />
+          </div>
+          <div class="col-span-3">
+            <label class="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Prodotto</label>
+            <select id="p-product" class="input mt-1" required></select>
+          </div>
+          <div class="col-span-2">
+            <label class="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Quantità</label>
+            <input id="p-qty" type="number" step="0.001" min="0" class="input mt-1" placeholder="0" required />
+          </div>
+          <div class="col-span-2">
+            <label class="text-[11px] font-medium text-slate-400 uppercase tracking-wider">U.M.</label>
+            <input id="p-unit" class="input mt-1" placeholder="pz / kg" required />
+          </div>
+          <div class="col-span-3">
+            <label class="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Prezzo unit. no IVA (€)</label>
+            <input id="p-price" type="number" step="0.0001" min="0" class="input mt-1" placeholder="0,00" required />
+          </div>
+          <div class="col-span-3 flex items-end">
+            <div class="flex-1 text-right text-sm">
+              <div class="text-slate-500 text-xs">Totale con IVA</div>
+              <div class="num font-semibold text-slate-100" id="p-total-preview">€ 0,00</div>
+            </div>
+          </div>
+          <div class="col-span-2 flex items-end">
+            <button type="submit" class="btn btn-primary w-full justify-center py-2.5">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+              Aggiungi
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div class="card rounded-xl overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
+          <h2 class="text-base font-semibold">Acquisti registrati <span class="text-slate-500 font-normal text-sm ml-1" id="purchases-count"></span></h2>
+          <select id="p-filter-month" class="input" style="width:auto"></select>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full table">
+            <thead>
+              <tr>
+                <th>Mese</th>
+                <th>N° Fattura</th>
+                <th>Data</th>
+                <th>Fornitore</th>
+                <th>Prodotto</th>
+                <th class="text-right">Qty</th>
+                <th>U.M.</th>
+                <th class="text-right">Prezzo</th>
+                <th class="text-right">Imponibile</th>
+                <th class="text-right">IVA 22%</th>
+                <th class="text-right">Totale</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="purchases-list"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION: SALES -->
+    <section id="section-sales" class="hidden p-8 space-y-6">
+      <div class="card rounded-xl p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-base font-semibold">Registra vendita</h2>
+          <div class="text-xs text-slate-500">Prezzo di vendita senza IVA · IVA 22% automatica</div>
+        </div>
+        <form id="form-sale" class="grid grid-cols-12 gap-3">
+          <div class="col-span-2">
+            <label class="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Mese</label>
+            <select id="s-month" class="input mt-1" required></select>
+          </div>
+          <div class="col-span-2">
+            <label class="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Canale</label>
+            <select id="s-channel" class="input mt-1" required>
+              <option value="sito">Sito</option>
+              <option value="amazon">Amazon</option>
+              <option value="ebay">eBay</option>
+            </select>
+          </div>
+          <div class="col-span-4">
+            <label class="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Prodotto</label>
+            <select id="s-product" class="input mt-1" required></select>
+          </div>
+          <div class="col-span-2">
+            <label class="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Quantità</label>
+            <input id="s-qty" type="number" step="0.001" min="0" class="input mt-1" required />
+          </div>
+          <div class="col-span-2">
+            <label class="text-[11px] font-medium text-slate-400 uppercase tracking-wider">U.M.</label>
+            <input id="s-unit" class="input mt-1" placeholder="pz / kg" required />
+          </div>
+          <div class="col-span-3">
+            <label class="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Prezzo unit. no IVA (€)</label>
+            <input id="s-price" type="number" step="0.0001" min="0" class="input mt-1" required />
+          </div>
+          <div class="col-span-6 flex items-end">
+            <div class="text-sm">
+              <div class="text-slate-500 text-xs">Imponibile / IVA / Totale</div>
+              <div class="num font-semibold text-slate-100" id="s-total-preview">€ 0,00 / € 0,00 / € 0,00</div>
+            </div>
+          </div>
+          <div class="col-span-3 flex items-end justify-end">
+            <button type="submit" class="btn btn-primary py-2.5 px-6">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+              Aggiungi vendita
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div class="card rounded-xl overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
+          <h2 class="text-base font-semibold">Vendite registrate <span class="text-slate-500 font-normal text-sm ml-1" id="sales-count"></span></h2>
+          <div class="flex items-center gap-2">
+            <select id="s-filter-channel" class="input" style="width:auto">
+              <option value="">Tutti i canali</option>
+              <option value="sito">Sito</option>
+              <option value="amazon">Amazon</option>
+              <option value="ebay">eBay</option>
+            </select>
+            <select id="s-filter-month" class="input" style="width:auto"></select>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full table">
+            <thead>
+              <tr>
+                <th>Mese</th>
+                <th>Canale</th>
+                <th>Prodotto</th>
+                <th class="text-right">Qty</th>
+                <th>U.M.</th>
+                <th class="text-right">Prezzo</th>
+                <th class="text-right">Imponibile</th>
+                <th class="text-right">IVA 22%</th>
+                <th class="text-right">Totale</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="sales-list"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION: PRODUCTS -->
+    <section id="section-products" class="hidden p-8 space-y-6">
+      <div class="card rounded-xl p-6">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h2 class="text-base font-semibold">Catalogo prodotti</h2>
+            <p class="text-sm text-slate-400 mt-0.5">Anagrafica: nome, SKU e unità di misura. I prezzi si inseriscono su ogni fattura di acquisto e su ogni vendita.</p>
+          </div>
+        </div>
+        <form id="form-product" class="grid grid-cols-12 gap-3">
+          <div class="col-span-5">
+            <label class="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Nome prodotto</label>
+            <input id="pr-name" class="input mt-1" placeholder="es. Cartuccia inchiostro nero" required />
+          </div>
+          <div class="col-span-3">
+            <label class="text-[11px] font-medium text-slate-400 uppercase tracking-wider">SKU / Codice</label>
+            <input id="pr-sku" class="input mt-1" placeholder="opzionale" />
+          </div>
+          <div class="col-span-2">
+            <label class="text-[11px] font-medium text-slate-400 uppercase tracking-wider">U.M.</label>
+            <input id="pr-unit" class="input mt-1" placeholder="pz / kg" required />
+          </div>
+          <div class="col-span-2 flex items-end">
+            <button type="submit" class="btn btn-primary w-full justify-center py-2.5">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+              Aggiungi
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div class="card rounded-xl overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-800">
+          <h2 class="text-base font-semibold">Prodotti <span class="text-slate-500 font-normal text-sm ml-1" id="products-count"></span></h2>
+        </div>
+        <table class="w-full table">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>SKU</th>
+              <th>U.M.</th>
+              <th class="text-right">Acquisti YTD</th>
+              <th class="text-right">Vendite YTD</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="products-list"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- MODAL: CONFIRM -->
+<div id="modal-confirm" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+  <div class="card rounded-xl p-6 max-w-md w-full">
+    <h3 class="text-lg font-semibold mb-2" id="confirm-title">Conferma</h3>
+    <p class="text-sm text-slate-400 mb-6" id="confirm-message">Sei sicuro?</p>
+    <div class="flex justify-end gap-2">
+      <button class="btn btn-ghost" id="confirm-cancel">Annulla</button>
+      <button class="btn btn-danger" id="confirm-ok">Conferma</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ADD YEAR -->
+<div id="modal-year" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+  <div class="card rounded-xl p-6 max-w-sm w-full">
+    <h3 class="text-lg font-semibold mb-2">Aggiungi anno di esercizio</h3>
+    <p class="text-sm text-slate-400 mb-4">Inserisci l'anno (es. 2028).</p>
+    <input id="year-input" type="number" min="2000" max="2100" class="input mb-4" placeholder="2028" />
+    <div class="flex justify-end gap-2">
+      <button class="btn btn-ghost" id="year-cancel">Annulla</button>
+      <button class="btn btn-primary" id="year-ok">Aggiungi</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { firebaseConfig } from './firebase-config.js';
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import {
+  getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
+  signOut, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+import {
+  getFirestore, collection, doc, onSnapshot, addDoc,
+  deleteDoc, setDoc, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+const VAT_RATE = 0.22;
+const MONTHS = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+const CHANNELS = { sito:'Sito', amazon:'Amazon', ebay:'eBay' };
+const DEFAULT_YEARS = [2026, 2027];
+
+const state = {
+  user: null,
+  section: 'dashboard',
+  currentYear: (() => { const y = new Date().getFullYear(); return DEFAULT_YEARS.includes(y) ? y : DEFAULT_YEARS[0]; })(),
+  years: [...DEFAULT_YEARS],
+  products: [],
+  purchases: [],
+  sales: [],
+  filters: { pMonth:'', sMonth:'', sChannel:'' },
+  unsub: [],
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const $  = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+const fmtEUR = n => new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR',minimumFractionDigits:2}).format(n||0);
+const fmtNum = (n,d=2) => new Intl.NumberFormat('it-IT',{minimumFractionDigits:d,maximumFractionDigits:d}).format(n||0);
+const escapeHtml = s => (s??'').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function setSaveStatus(kind) {
+  const dot = $('#save-dot'), label = $('#save-label'), time = $('#save-time');
+  dot.classList.remove('saving','error');
+  if (kind === 'saving') { dot.classList.add('saving'); label.textContent = 'Salvataggio…'; }
+  else if (kind === 'error') { dot.classList.add('error'); label.textContent = 'Errore salvataggio'; }
+  else { label.textContent = 'Autosalvato'; time.textContent = new Date().toLocaleTimeString('it-IT'); }
+}
+async function withSave(fn) {
+  setSaveStatus('saving');
+  try { await fn(); setSaveStatus('ok'); }
+  catch (e) { console.error(e); setSaveStatus('error'); alert('Errore nel salvataggio: ' + e.message); }
+}
+
+// ----- AUTH -----
+let signupMode = false;
+$('#toggle-signup').addEventListener('click', () => {
+  signupMode = !signupMode;
+  $('#login-title').textContent = signupMode ? 'Crea account' : 'Accedi';
+  $('#login-subtitle').textContent = signupMode ? 'Registra un nuovo utente del team' : 'Inserisci le credenziali del team';
+  $('#login-submit').textContent = signupMode ? 'Registrati' : 'Accedi';
+  $('#toggle-signup').textContent = signupMode ? 'Hai già un account? Accedi' : 'Non hai un account? Registrati';
+  $('#login-error').classList.add('hidden');
+});
+
+$('#form-login').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  $('#login-error').classList.add('hidden');
+  const email = $('#login-email').value.trim();
+  const password = $('#login-password').value;
+  try {
+    if (signupMode) await createUserWithEmailAndPassword(auth, email, password);
+    else await signInWithEmailAndPassword(auth, email, password);
+  } catch (err) {
+    const map = {
+      'auth/invalid-credential': 'Credenziali non valide',
+      'auth/wrong-password': 'Password errata',
+      'auth/user-not-found': 'Utente non trovato',
+      'auth/email-already-in-use': 'Email già registrata',
+      'auth/weak-password': 'Password troppo debole (min 6 caratteri)',
+      'auth/invalid-email': 'Email non valida',
+      'auth/network-request-failed': 'Errore di rete',
+      'auth/too-many-requests': 'Troppi tentativi, riprova più tardi',
+      'auth/operation-not-allowed': "Registrazioni disabilitate. Contatta l'admin.",
+      'auth/api-key-not-valid.-please-pass-a-valid-api-key.': 'API key Firebase non valida. Controlla firebase-config.js',
+    };
+    const msg = map[err.code] || err.message || 'Errore sconosciuto';
+    const el = $('#login-error'); el.textContent = msg; el.classList.remove('hidden');
+  }
+});
+
+$('#btn-logout').addEventListener('click', () => signOut(auth));
+
+onAuthStateChanged(auth, (user) => {
+  state.user = user;
+  $('#view-loading').classList.add('hidden');
+  if (user) {
+    $('#view-login').classList.add('hidden');
+    $('#view-app').classList.remove('hidden');
+    $('#user-email').textContent = user.email;
+    $('#user-avatar').textContent = (user.email || '?').charAt(0).toUpperCase();
+    setupListeners();
+    ensureMetaDoc();
+  } else {
+    $('#view-app').classList.add('hidden');
+    $('#view-login').classList.remove('hidden');
+    state.unsub.forEach(u => u()); state.unsub = [];
+  }
+});
+
+// ----- FIRESTORE -----
+async function ensureMetaDoc() {
+  try { await setDoc(doc(db,'meta','config'), { years: DEFAULT_YEARS }, { merge: true }); }
+  catch (e) { console.warn('meta init', e); }
+}
+
+function setupListeners() {
+  state.unsub.forEach(u => u()); state.unsub = [];
+
+  state.unsub.push(onSnapshot(doc(db,'meta','config'), snap => {
+    const d = snap.data();
+    state.years = (d && Array.isArray(d.years) && d.years.length)
+      ? [...new Set(d.years)].sort((a,b)=>a-b)
+      : [...DEFAULT_YEARS];
+    if (!state.years.includes(state.currentYear)) state.currentYear = state.years[state.years.length-1];
+    renderYearSelector();
+    renderAll();
+  }));
+
+  state.unsub.push(onSnapshot(collection(db,'products'), snap => {
+    state.products = snap.docs.map(d => ({ id:d.id, ...d.data() }))
+      .sort((a,b) => (a.name||'').localeCompare(b.name||''));
+    renderAll();
+  }));
+
+  state.unsub.push(onSnapshot(collection(db,'purchases'), snap => {
+    state.purchases = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+    renderAll();
+  }));
+
+  state.unsub.push(onSnapshot(collection(db,'sales'), snap => {
+    state.sales = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+    renderAll();
+  }));
+}
+
+// ----- YEAR SELECTOR -----
+function renderYearSelector() {
+  $('#year-select').innerHTML = state.years.map(y => `<option value="${y}" ${y===state.currentYear?'selected':''}>${y}</option>`).join('');
+}
+$('#year-select').addEventListener('change', e => { state.currentYear = Number(e.target.value); renderAll(); });
+$('#btn-add-year').addEventListener('click', () => {
+  $('#year-input').value = Math.max(...state.years) + 1;
+  $('#modal-year').classList.remove('hidden');
+  setTimeout(()=>$('#year-input').focus(), 50);
+});
+$('#year-cancel').addEventListener('click', () => $('#modal-year').classList.add('hidden'));
+$('#year-ok').addEventListener('click', async () => {
+  const y = parseInt($('#year-input').value, 10);
+  if (!y || y < 2000 || y > 2100) { alert('Anno non valido'); return; }
+  const newYears = [...new Set([...state.years, y])].sort((a,b)=>a-b);
+  await withSave(async () => { await setDoc(doc(db,'meta','config'), { years:newYears }, { merge:true }); });
+  state.currentYear = y;
+  $('#modal-year').classList.add('hidden');
+});
+
+// ----- NAVIGATION -----
+const SECTION_META = {
+  dashboard: { crumb:'Dashboard', title:'Panoramica esercizio' },
+  vat:       { crumb:'Fiscale',   title:'Riepilogo IVA' },
+  purchases: { crumb:'Ciclo passivo', title:'Acquisti da fattura' },
+  sales:     { crumb:'Ciclo attivo',  title:'Vendite multicanale' },
+  products:  { crumb:'Anagrafiche',   title:'Catalogo prodotti' },
+};
+function goto(section) {
+  state.section = section;
+  $$('.nav-link').forEach(a => a.classList.toggle('active', a.dataset.section === section));
+  $$('main > section').forEach(s => s.classList.add('hidden'));
+  $('#section-'+section).classList.remove('hidden');
+  const m = SECTION_META[section];
+  $('#crumb').textContent = m.crumb;
+  $('#page-title').textContent = m.title;
+  renderAll();
+}
+$$('.nav-link').forEach(a => a.addEventListener('click', () => goto(a.dataset.section)));
+
+// ----- MONTH SELECTS -----
+function fillMonthSelect(sel, includeAll=false) {
+  const opts = [];
+  if (includeAll) opts.push(`<option value="">Tutti i mesi</option>`);
+  MONTHS.forEach((m,i) => opts.push(`<option value="${i+1}">${m}</option>`));
+  sel.innerHTML = opts.join('');
+}
+fillMonthSelect($('#p-month'));
+fillMonthSelect($('#s-month'));
+fillMonthSelect($('#p-filter-month'), true);
+fillMonthSelect($('#s-filter-month'), true);
+$('#p-month').value = new Date().getMonth()+1;
+$('#s-month').value = new Date().getMonth()+1;
+$('#p-date').valueAsDate = new Date();
+
+$('#p-filter-month').addEventListener('change', e => { state.filters.pMonth = e.target.value; renderPurchases(); });
+$('#s-filter-month').addEventListener('change', e => { state.filters.sMonth = e.target.value; renderSales(); });
+$('#s-filter-channel').addEventListener('change', e => { state.filters.sChannel = e.target.value; renderSales(); });
+
+// ----- PRODUCT OPTIONS -----
+function renderProductOptions() {
+  const opts = state.products.length
+    ? state.products.map(p => `<option value="${p.id}">${escapeHtml(p.name)}${p.sku?` · ${escapeHtml(p.sku)}`:''}</option>`).join('')
+    : `<option value="">— nessun prodotto: aggiungine uno in "Prodotti" —</option>`;
+  $('#p-product').innerHTML = opts;
+  $('#s-product').innerHTML = opts;
+}
+
+// ----- LIVE PREVIEWS -----
+function updatePurchasePreview() {
+  const qty = parseFloat($('#p-qty').value) || 0;
+  const price = parseFloat($('#p-price').value) || 0;
+  const imp = qty * price;
+  $('#p-total-preview').textContent = fmtEUR(imp * (1 + VAT_RATE));
+}
+['#p-qty','#p-price'].forEach(s => $(s).addEventListener('input', updatePurchasePreview));
+
+function updateSalePreview() {
+  const qty = parseFloat($('#s-qty').value) || 0;
+  const price = parseFloat($('#s-price').value) || 0;
+  const imp = qty * price;
+  const iva = imp * VAT_RATE;
+  $('#s-total-preview').textContent = `${fmtEUR(imp)} / ${fmtEUR(iva)} / ${fmtEUR(imp+iva)}`;
+}
+['#s-qty','#s-price'].forEach(s => $(s).addEventListener('input', updateSalePreview));
+
+$('#p-product').addEventListener('change', e => {
+  const p = state.products.find(x => x.id === e.target.value);
+  if (p && p.unit) $('#p-unit').value = p.unit;
+});
+$('#s-product').addEventListener('change', e => {
+  const p = state.products.find(x => x.id === e.target.value);
+  if (p && p.unit) $('#s-unit').value = p.unit;
+});
+
+// ----- PRODUCTS -----
+$('#form-product').addEventListener('submit', async e => {
+  e.preventDefault();
+  const name = $('#pr-name').value.trim();
+  const sku = $('#pr-sku').value.trim();
+  const unit = $('#pr-unit').value.trim();
+  if (!name || !unit) return;
+  await withSave(async () => { await addDoc(collection(db,'products'), { name, sku, unit, createdAt: serverTimestamp() }); });
+  e.target.reset();
+});
+async function deleteProduct(id) {
+  const p = state.products.find(x => x.id === id);
+  const lp = state.purchases.filter(x => x.productId === id).length;
+  const ls = state.sales.filter(x => x.productId === id).length;
+  const msg = (lp+ls) > 0
+    ? `Il prodotto "${p.name}" è collegato a ${lp} acquisti e ${ls} vendite. Elimina comunque? (I record storici resteranno con il nome del prodotto.)`
+    : `Eliminare il prodotto "${p.name}"?`;
+  confirmModal('Elimina prodotto', msg, async () => {
+    await withSave(async () => { await deleteDoc(doc(db,'products',id)); });
+  });
+}
+
+// ----- PURCHASES -----
+$('#form-purchase').addEventListener('submit', async e => {
+  e.preventDefault();
+  const productId = $('#p-product').value;
+  const product = state.products.find(x => x.id === productId);
+  if (!product) { alert('Crea prima un prodotto nel Catalogo'); return; }
+  const qty = parseFloat($('#p-qty').value);
+  const price = parseFloat($('#p-price').value);
+  const imponibile = qty * price;
+  const iva = imponibile * VAT_RATE;
+  const record = {
+    year: state.currentYear,
+    month: parseInt($('#p-month').value, 10),
+    invoiceNumber: $('#p-invoice').value.trim(),
+    invoiceDate: $('#p-date').value,
+    supplier: $('#p-supplier').value.trim(),
+    productId,
+    productName: product.name,
+    qty, unit: $('#p-unit').value.trim(),
+    unitPriceNoVat: price,
+    imponibile, iva, totale: imponibile + iva,
+    createdAt: serverTimestamp(),
+  };
+  await withSave(async () => { await addDoc(collection(db,'purchases'), record); });
+  const keepMonth = $('#p-month').value;
+  const keepSupplier = $('#p-supplier').value;
+  e.target.reset();
+  $('#p-month').value = keepMonth;
+  $('#p-supplier').value = keepSupplier;
+  $('#p-date').valueAsDate = new Date();
+  updatePurchasePreview();
+});
+async function deletePurchase(id) {
+  confirmModal('Elimina acquisto', "Confermi l'eliminazione della riga?", async () => {
+    await withSave(async () => { await deleteDoc(doc(db,'purchases',id)); });
+  });
+}
+
+// ----- SALES -----
+$('#form-sale').addEventListener('submit', async e => {
+  e.preventDefault();
+  const productId = $('#s-product').value;
+  const product = state.products.find(x => x.id === productId);
+  if (!product) { alert('Crea prima un prodotto nel Catalogo'); return; }
+  const qty = parseFloat($('#s-qty').value);
+  const price = parseFloat($('#s-price').value);
+  const imponibile = qty * price;
+  const iva = imponibile * VAT_RATE;
+  const record = {
+    year: state.currentYear,
+    month: parseInt($('#s-month').value, 10),
+    channel: $('#s-channel').value,
+    productId,
+    productName: product.name,
+    qty, unit: $('#s-unit').value.trim(),
+    unitPriceNoVat: price,
+    imponibile, iva, totale: imponibile + iva,
+    createdAt: serverTimestamp(),
+  };
+  await withSave(async () => { await addDoc(collection(db,'sales'), record); });
+  const keepMonth = $('#s-month').value;
+  const keepChannel = $('#s-channel').value;
+  e.target.reset();
+  $('#s-month').value = keepMonth;
+  $('#s-channel').value = keepChannel;
+  updateSalePreview();
+});
+async function deleteSale(id) {
+  confirmModal('Elimina vendita', "Confermi l'eliminazione della riga?", async () => {
+    await withSave(async () => { await deleteDoc(doc(db,'sales',id)); });
+  });
+}
+
+// ----- CONFIRM MODAL -----
+let confirmCb = null;
+function confirmModal(title, msg, cb) {
+  $('#confirm-title').textContent = title;
+  $('#confirm-message').textContent = msg;
+  confirmCb = cb;
+  $('#modal-confirm').classList.remove('hidden');
+}
+$('#confirm-cancel').addEventListener('click', () => { confirmCb = null; $('#modal-confirm').classList.add('hidden'); });
+$('#confirm-ok').addEventListener('click', () => { if (confirmCb) confirmCb(); confirmCb = null; $('#modal-confirm').classList.add('hidden'); });
+
+// ----- AGGREGATIONS -----
+const yearPurchases = () => state.purchases.filter(p => p.year === state.currentYear);
+const yearSales     = () => state.sales.filter(s => s.year === state.currentYear);
+
+function monthlyAggregates() {
+  const out = MONTHS.map((_,i) => ({ month:i+1, salesImp:0, salesIva:0, purchImp:0, purchIva:0 }));
+  yearSales().forEach(s => { const m = out[s.month-1]; if (!m) return; m.salesImp += s.imponibile||0; m.salesIva += s.iva||0; });
+  yearPurchases().forEach(p => { const m = out[p.month-1]; if (!m) return; m.purchImp += p.imponibile||0; m.purchIva += p.iva||0; });
+  return out.map(m => ({ ...m, vatDue: m.salesIva - m.purchIva }));
+}
+
+// ----- RENDER: DASHBOARD -----
+function renderDashboard() {
+  const agg = monthlyAggregates();
+  const ytdSales = agg.reduce((s,m)=>s+m.salesImp,0);
+  const ytdPurch = agg.reduce((s,m)=>s+m.purchImp,0);
+  const ytdVat = agg.reduce((s,m)=>s+m.vatDue,0);
+  const nowMonth = new Date().getMonth();
+  const cur = agg[nowMonth];
+
+  $('#kpi-sales').textContent = fmtEUR(ytdSales);
+  $('#kpi-sales-sub').textContent = `${yearSales().length} righe`;
+  $('#kpi-purchases').textContent = fmtEUR(ytdPurch);
+  $('#kpi-purchases-sub').textContent = `${yearPurchases().length} righe`;
+
+  const vatEl = $('#kpi-vat-due');
+  vatEl.textContent = fmtEUR(ytdVat);
+  vatEl.className = 'kpi-value mt-2 ' + (ytdVat > 0 ? 'text-red-400' : ytdVat < 0 ? 'text-brand-400' : '');
+  $('#kpi-vat-due-sub').textContent = ytdVat > 0 ? "debito verso l'Erario" : ytdVat < 0 ? 'credito IVA' : 'saldo neutro';
+
+  const badge = $('#kpi-current-badge');
+  badge.textContent = MONTHS[nowMonth];
+  badge.className = 'badge bg-brand-500/15 text-brand-400';
+  const curVal = $('#kpi-current');
+  curVal.textContent = fmtEUR(cur.vatDue);
+  curVal.className = 'kpi-value mt-2 ' + (cur.vatDue > 0 ? 'text-red-400' : cur.vatDue < 0 ? 'text-brand-400' : '');
+  $('#kpi-current-sub').textContent = cur.vatDue > 0
+    ? `Acquista ${fmtEUR(cur.vatDue/VAT_RATE)} di imponibile per azzerare`
+    : cur.vatDue < 0 ? 'A credito, nulla da versare' : 'Nulla da versare';
+
+  $('#dashboard-months').innerHTML = agg.map((m,i) => {
+    const isCurrent = i === nowMonth;
+    const dueColor = m.vatDue > 0 ? 'text-red-400' : m.vatDue < 0 ? 'text-brand-400' : 'text-slate-400';
+    const maxAbs = Math.max(...agg.map(x => Math.abs(x.vatDue)), 1);
+    const pct = Math.min(100, Math.abs(m.vatDue) / maxAbs * 100);
+    return `
+      <tr class="${isCurrent ? 'bg-brand-500/5' : ''}">
+        <td class="month-cell font-medium">${MONTHS[i]}${isCurrent?' <span class="badge bg-brand-500/15 text-brand-400 ml-1">oggi</span>':''}</td>
+        <td class="text-right num">${fmtEUR(m.salesImp)}</td>
+        <td class="text-right num">${fmtEUR(m.purchImp)}</td>
+        <td class="text-right num text-brand-400/80">${fmtEUR(m.salesIva)}</td>
+        <td class="text-right num text-blue-400/80">${fmtEUR(m.purchIva)}</td>
+        <td class="text-right num font-semibold ${dueColor}">${fmtEUR(m.vatDue)}</td>
+        <td><div class="bar"><span style="width:${pct}%"></span></div></td>
+      </tr>`;
+  }).join('');
+
+  const debtMonths = agg.map((m,i) => ({ ...m, idx:i })).filter(m => m.vatDue > 0);
+  const opt = $('#optimization-list');
+  if (debtMonths.length === 0) {
+    opt.innerHTML = `<div class="text-sm text-slate-400 flex items-center gap-2 py-4">
+      <svg class="w-5 h-5 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      Nessun mese in debito IVA. Ottima gestione.
+    </div>`;
+  } else {
+    opt.innerHTML = debtMonths.map(m => {
+      const needed = m.vatDue / VAT_RATE;
+      const isCur = m.idx === nowMonth;
+      return `
+        <div class="flex items-center justify-between p-4 rounded-lg border ${isCur?'bg-red-950/20 border-red-900/40':'bg-slate-900/40 border-slate-800'}">
+          <div class="flex items-center gap-4">
+            <div class="w-10 h-10 rounded-lg ${isCur?'bg-red-500/15 text-red-400':'bg-slate-800 text-slate-300'} flex items-center justify-center font-bold text-sm">${(m.idx+1).toString().padStart(2,'0')}</div>
+            <div>
+              <div class="font-semibold">${MONTHS[m.idx]} ${state.currentYear}${isCur?' <span class="badge bg-red-500/15 text-red-400 ml-1">mese corrente</span>':''}</div>
+              <div class="text-xs text-slate-400 mt-0.5">IVA vendite ${fmtEUR(m.salesIva)} − IVA acquisti ${fmtEUR(m.purchIva)} = <span class="text-red-400 font-medium">${fmtEUR(m.vatDue)}</span> da versare</div>
+            </div>
+          </div>
+          <div class="text-right">
+            <div class="text-[11px] uppercase tracking-wider text-slate-500">Imponibile acquisti da fare</div>
+            <div class="num text-lg font-bold text-brand-400">${fmtEUR(needed)}</div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+}
+
+// ----- RENDER: VAT -----
+function renderVat() {
+  const agg = monthlyAggregates();
+  const totS = agg.reduce((s,m)=>s+m.salesIva,0);
+  const totP = agg.reduce((s,m)=>s+m.purchIva,0);
+  const totD = totS - totP;
+  $('#vat-sales-total').textContent = fmtEUR(totS);
+  $('#vat-purchases-total').textContent = fmtEUR(totP);
+  const dueEl = $('#vat-due-total');
+  dueEl.textContent = fmtEUR(totD);
+  dueEl.className = 'kpi-value mt-2 ' + (totD > 0 ? 'text-red-400' : totD < 0 ? 'text-brand-400' : '');
+
+  $('#vat-months').innerHTML = agg.map((m,i) => {
+    const dueColor = m.vatDue > 0 ? 'text-red-400' : m.vatDue < 0 ? 'text-brand-400' : 'text-slate-500';
+    const needed = m.vatDue > 0 ? m.vatDue / VAT_RATE : 0;
+    return `
+      <tr>
+        <td class="font-medium">${MONTHS[i]}</td>
+        <td class="text-right num">${fmtEUR(m.salesImp)}</td>
+        <td class="text-right num text-brand-400/80">${fmtEUR(m.salesIva)}</td>
+        <td class="text-right num">${fmtEUR(m.purchImp)}</td>
+        <td class="text-right num text-blue-400/80">${fmtEUR(m.purchIva)}</td>
+        <td class="text-right num font-semibold ${dueColor}">${fmtEUR(m.vatDue)}</td>
+        <td class="text-right num ${needed>0?'text-brand-400':'text-slate-600'}">${needed>0?fmtEUR(needed):'—'}</td>
+      </tr>`;
+  }).join('');
+}
+
+$('#btn-export-vat').addEventListener('click', () => {
+  const agg = monthlyAggregates();
+  const rows = [['Mese','Imponibile vendite','IVA vendite','Imponibile acquisti','IVA acquisti','IVA da versare','Suggerimento imponibile acquisti']];
+  agg.forEach((m,i) => {
+    const needed = m.vatDue > 0 ? m.vatDue/VAT_RATE : 0;
+    rows.push([MONTHS[i], m.salesImp.toFixed(2), m.salesIva.toFixed(2), m.purchImp.toFixed(2), m.purchIva.toFixed(2), m.vatDue.toFixed(2), needed.toFixed(2)]);
+  });
+  const csv = rows.map(r => r.join(';')).join('\n');
+  const blob = new Blob([csv], { type:'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `alphaink-iva-${state.currentYear}.csv`; a.click();
+  URL.revokeObjectURL(url);
+});
+
+// ----- RENDER: PURCHASES -----
+function renderPurchases() {
+  const list = yearPurchases()
+    .filter(p => !state.filters.pMonth || String(p.month) === state.filters.pMonth)
+    .sort((a,b) => (b.month - a.month) || ((b.createdAt?.seconds||0) - (a.createdAt?.seconds||0)));
+  $('#purchases-count').textContent = list.length ? `· ${list.length}` : '';
+  $('#purchases-list').innerHTML = list.length ? list.map(p => `
+    <tr>
+      <td>${MONTHS[p.month-1]}</td>
+      <td class="font-medium">${escapeHtml(p.invoiceNumber)}</td>
+      <td class="text-slate-400">${escapeHtml(p.invoiceDate||'')}</td>
+      <td>${escapeHtml(p.supplier)}</td>
+      <td>${escapeHtml(p.productName)}</td>
+      <td class="text-right num">${fmtNum(p.qty,2)}</td>
+      <td class="text-slate-400">${escapeHtml(p.unit)}</td>
+      <td class="text-right num">${fmtEUR(p.unitPriceNoVat)}</td>
+      <td class="text-right num">${fmtEUR(p.imponibile)}</td>
+      <td class="text-right num text-blue-400/80">${fmtEUR(p.iva)}</td>
+      <td class="text-right num font-semibold">${fmtEUR(p.totale)}</td>
+      <td class="text-right">
+        <button class="text-slate-500 hover:text-red-400 p-1" data-del-purchase="${p.id}" title="Elimina">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3"/></svg>
+        </button>
+      </td>
+    </tr>`).join('')
+    : `<tr><td colspan="12" class="text-center py-10 text-slate-500 text-sm">Nessun acquisto registrato per questo anno${state.filters.pMonth?'/mese':''}.</td></tr>`;
+  $$('#purchases-list [data-del-purchase]').forEach(b => b.addEventListener('click', () => deletePurchase(b.dataset.delPurchase)));
+}
+
+// ----- RENDER: SALES -----
+function renderSales() {
+  const list = yearSales()
+    .filter(s => !state.filters.sMonth || String(s.month) === state.filters.sMonth)
+    .filter(s => !state.filters.sChannel || s.channel === state.filters.sChannel)
+    .sort((a,b) => (b.month - a.month) || ((b.createdAt?.seconds||0) - (a.createdAt?.seconds||0)));
+  $('#sales-count').textContent = list.length ? `· ${list.length}` : '';
+  $('#sales-list').innerHTML = list.length ? list.map(s => `
+    <tr>
+      <td>${MONTHS[s.month-1]}</td>
+      <td><span class="badge badge-${s.channel}">${CHANNELS[s.channel]||s.channel}</span></td>
+      <td>${escapeHtml(s.productName)}</td>
+      <td class="text-right num">${fmtNum(s.qty,2)}</td>
+      <td class="text-slate-400">${escapeHtml(s.unit)}</td>
+      <td class="text-right num">${fmtEUR(s.unitPriceNoVat)}</td>
+      <td class="text-right num">${fmtEUR(s.imponibile)}</td>
+      <td class="text-right num text-brand-400/80">${fmtEUR(s.iva)}</td>
+      <td class="text-right num font-semibold">${fmtEUR(s.totale)}</td>
+      <td class="text-right">
+        <button class="text-slate-500 hover:text-red-400 p-1" data-del-sale="${s.id}" title="Elimina">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3"/></svg>
+        </button>
+      </td>
+    </tr>`).join('')
+    : `<tr><td colspan="10" class="text-center py-10 text-slate-500 text-sm">Nessuna vendita registrata${state.filters.sMonth||state.filters.sChannel?' con questi filtri':''}.</td></tr>`;
+  $$('#sales-list [data-del-sale]').forEach(b => b.addEventListener('click', () => deleteSale(b.dataset.delSale)));
+}
+
+// ----- RENDER: PRODUCTS -----
+function renderProducts() {
+  $('#products-count').textContent = state.products.length ? `· ${state.products.length}` : '';
+  $('#products-list').innerHTML = state.products.length ? state.products.map(p => {
+    const pc = yearPurchases().filter(x => x.productId === p.id).length;
+    const sc = yearSales().filter(x => x.productId === p.id).length;
+    return `
+      <tr>
+        <td class="font-medium">${escapeHtml(p.name)}</td>
+        <td class="text-slate-400 font-mono text-xs">${escapeHtml(p.sku||'—')}</td>
+        <td>${escapeHtml(p.unit)}</td>
+        <td class="text-right num text-slate-400">${pc}</td>
+        <td class="text-right num text-slate-400">${sc}</td>
+        <td class="text-right">
+          <button class="text-slate-500 hover:text-red-400 p-1" data-del-product="${p.id}" title="Elimina">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3"/></svg>
+          </button>
+        </td>
+      </tr>`;
+  }).join('') : `<tr><td colspan="6" class="text-center py-10 text-slate-500 text-sm">Nessun prodotto. Aggiungine uno con il form qui sopra.</td></tr>`;
+  $$('#products-list [data-del-product]').forEach(b => b.addEventListener('click', () => deleteProduct(b.dataset.delProduct)));
+}
+
+// ----- RENDER ALL -----
+function renderAll() {
+  renderProductOptions();
+  renderDashboard();
+  renderVat();
+  renderPurchases();
+  renderSales();
+  renderProducts();
+}
+
+goto('dashboard');
+</script>
+</body>
+</html>
